@@ -7,6 +7,7 @@ import numpy as np
 # from ContourExtraction import Segmentation
 WIDTH=640
 HIGH=480
+brightness_threshold = 0
 # global dataList_c
 #
 '''形态学操作，包括开闭操作，腐蚀膨胀'''
@@ -121,24 +122,44 @@ def dilate_binary(binary, x, y):
 def channel_subtract(image):
     # 获得红色通道
     blue_c, green_c, red_c = cv.split(image)
-    red_sub_blue = red_c - blue_c
-    blue_sub_red = blue_c -red_c
+    # red_sub_blue = red_c - blue_c
+    # blue_sub_red = blue_c -red_c
+    red_sub_blue = cv.subtract(red_c,blue_c)
+    blue_sub_red = cv.subtract(blue_c,red_c)
     red_sub_blue = cv.GaussianBlur(red_sub_blue,(3,3),1.5)
     blue_sub_red = cv.GaussianBlur(blue_sub_red,(3,3),1.5)
     normalize_red = cv.normalize(red_sub_blue,0,255,cv.NORM_MINMAX)
     normalize_blue = cv.normalize(blue_sub_red,0,255,cv.NORM_MINMAX)
-    _,red_thresh = cv.threshold(normalize_red,0,255,cv.THRESH_OTSU)
-    _,blue_thresh = cv.threshold(normalize_blue,0,255,cv.THRESH_OTSU)
-    red_dst = open_binary(red_thresh,3,3)
-    blue_dst = open_binary(blue_thresh,3,3)
-    red_dst = dilate_binary(red_dst,3,3)
-    blue_dst = dilate_binary(blue_dst,3,3)
+    # 大津阈值
+    _,red_thresh = cv.threshold(normalize_red,brightness_threshold,255,cv.THRESH_OTSU)
+    _,blue_thresh = cv.threshold(normalize_blue,brightness_threshold,255,cv.THRESH_OTSU)
+    # 
+    # _,red_thresh = cv.threshold(normalize_red,0,255,cv.THRESH_BINARY)
+    # _,blue_thresh = cv.threshold(normalize_blue,0,255,cv.THRESH_BINARY)
+    # 局部阈值
+    # red_thresh =cv.adaptiveThreshold(normalize_red, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 25, 10)
+    # blue_thresh =cv.adaptiveThreshold(normalize_blue, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY, 25, 10)
+    # 形态学处理
+    
+    red_thresh = close_binary(red_thresh,3,5)
+    red_thresh = open_binary(red_thresh,3,5)
+    # blue_dst = open_binary(blue_thresh,3,3)
+    # red_dst = dilate_binary(red_thresh,1,1)
+    blue_dst = dilate_binary(blue_thresh,3,3)
+    # red_dst= open_binary(red_dst,3,3)
     # cv.Canny(red_dst,red_dst,3,9,3)
     # cv.Canny(blue_dst, blue_dst,3,9,3)
     # red_dst = cv.Canny(red_dst, 50, 150)
     # blue_dst = cv.Canny(blue_dst, 50, 150)
-    cv.imshow("red_sub_img", red_dst)
-    cv.imshow("blue_sub_img", blue_dst)
+    # 通道相减后的灰度图
+    # cv.imshow("red_sub_img", red_sub_blue)
+    # cv.imshow("blue_sub_img", blue_sub_red)
+    # 阈值化后的二值图
+    # cv.imshow("red_thresh", red_thresh)
+    # cv.imshow("blue_thresh", blue_thresh)
+    # 形态学操作后的二值图
+    cv.imshow("red_sub_img", red_thresh)
+    # cv.imshow("blue_sub_img", blue_dst)
 '''通道相减、阈值分割'''
 
 # '''边缘、轮廓提取筛选灯条'''
@@ -298,8 +319,36 @@ def channel_subtract(image):
 
 # 按间距中的绿色按钮以运行脚本。
 if __name__ == '__main__':
-
+    #显示OpenCV的编译信息，可以查看有没有包含V4L2支持，如果没有需要重新编译
+    # print(cv.getBuildInformation())
     cap=cv.VideoCapture('armor.mp4')
+    '''
+    # 相机可调参数，视频流没用
+    #显示缓存数，默认为4最大为10
+    # print(cap.get(cv.CAP_PROP_BUFFERSIZE))
+    #设置缓存帧为2
+    # cap.set(cv.CAP_PROP_BUFFERSIZE,2)
+    # print(cap.get(cv.CAP_PROP_BUFFERSIZE))
+    #调节摄像头分辨率
+    # cap.set(cv.CAP_PROP_FRAME_HEIGHT, 800)
+    # cap.set(cv.CAP_PROP_FRAME_WIDTH, 1280)
+    #设置图像为MJPG格式，大多数情况下只有这个格式能达到最大帧率
+    # print('setform', cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter.fourcc('M', 'J', 'P', 'G')))
+    #设置FPS
+    # print('setfps', cap.set(cv.CAP_PROP_FPS, 60))
+    #以上两句打印出来的是设置有没有成功，成功的话为True否则是False
+    # gamm = 100
+    # expo = 1
+    #设置Gamma
+    # print(cap.set(cv.CAP_PROP_GAMMA, gamm))
+    #设置成手动曝光
+    # print(cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 1))
+    #设置曝光
+    # print(cap.set(cv.CAP_PROP_EXPOSURE, expo))
+    #设置成自动曝光
+    # print(cap.set(cv.CAP_PROP_AUTO_EXPOSURE,2.6) )
+    '''
+
     # creatTrackbar()
     # hsvs = Segmentation()
     while(1):
@@ -309,6 +358,7 @@ if __name__ == '__main__':
         # find_contours(dst_dilate, frame)
         # cv.imshow("winName", dst_dilate)
         # cv.imshow("winName1", frame)
+        cv.imshow("img",img)
         if cv.waitKey(1) == 27:
             break
         # if cv.waitKey(1) == 27:
